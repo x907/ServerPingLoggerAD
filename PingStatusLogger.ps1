@@ -29,9 +29,25 @@
 
 param (
     [Parameter(Mandatory=$true)]
+    [ValidateScript({
+        if (-Not ($_ | Test-Path)) {
+            throw "File path `"$($_)`" does not exist."
+        } 
+        if (-Not ($_ | Test-Path -PathType Leaf)) {
+            throw "File path `"$($_)`" does not point to a file."
+        }
+        return $true
+    })]
     [string]$FilePath,
     
     [Parameter(Mandatory=$true)]
+    [ValidateScript({
+        $dir = Split-Path $_
+        if (-Not ($dir | Test-Path)) {
+            throw "Directory `"$dir`" does not exist."
+        }
+        return $true
+    })]
     [string]$OutputPath
 )
 
@@ -60,7 +76,7 @@ foreach ($Server in $Servers) {
             Write-Host "Successfully pinged $serverName" -ForegroundColor Green
         }
         catch {
-            Write-Host "Error pinging $serverName: $_"
+            Write-Host "Error pinging ${serverName}: $_"
             $PingResults.Add([PSCustomObject]@{
                 Name = $serverName
                 Status = "Down"
