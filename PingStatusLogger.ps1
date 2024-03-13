@@ -1,30 +1,27 @@
 <#
 .SYNOPSIS
-    This script pings a list of servers by their names and logs the results to a CSV file.
+    This script pings a list of servers and logs the ping status and response time to a CSV file.
 
 .DESCRIPTION
-    The script imports a CSV file containing server names. It then pings each server by name, records the ping results, including the server name, status (up or down), and response time. The ping results are stored in a generic list. The script handles exceptions for servers that are down or unreachable. Finally, the ping results are exported to a CSV file.
+    The script takes two mandatory parameters: $FilePath and $OutputPath. 
+    $FilePath should be the path to a CSV file containing a list of server names.
+    $OutputPath should be the path where the ping results will be saved as a CSV file.
 
 .PARAMETER FilePath
-    The file path of the CSV file containing server names.
+    The path to the CSV file containing a list of server names.
 
 .PARAMETER OutputPath
-    The file path where the ping results will be saved.
-
-.INPUTS
-    None. The script reads server names from a CSV file.
-
-.OUTPUTS
-    A CSV file containing the ping results.
+    The path where the ping results will be saved as a CSV file.
 
 .EXAMPLE
-    .\serverpinglogger.ps1 -FilePath "c:\source\servers.csv" -OutputPath "c:\output\pingresults.csv"
-    - This command runs the script and pings the servers listed in the CSV file.
+    .\PingStatusLogger.ps1 -FilePath "C:\servers.csv" -OutputPath "C:\ping_results.csv"
+    This example runs the script with the specified input and output paths.
 
 .NOTES
-    Author: David Dias
-    Date: 01/30/2024
-    Version: 1.0.4
+    - The script requires the Test-Connection cmdlet to be available.
+    - The CSV file should have a "Name" column containing the server names.
+    - If a server cannot be pinged, it will be marked as "Down" in the ping results.
+    - The ping results will include the response time for each server that was successfully pinged.
 #>
 
 param (
@@ -68,20 +65,16 @@ foreach ($Server in $Servers) {
     if (![string]::IsNullOrEmpty($serverName)) {
         try {
             $PingResult = Test-Connection -ComputerName $serverName -Count 1 -ErrorAction Stop
-            $PingResults.Add([PSCustomObject]@{
-                Name = $serverName
-                Status = "Up"
-                ResponseTime = $PingResult.ResponseTime
-            })
+            $Server | Add-Member -NotePropertyName Status -NotePropertyValue "Up"
+            $Server | Add-Member -NotePropertyName ResponseTime -NotePropertyValue $PingResult.ResponseTime
+            $PingResults.Add($Server)
             Write-Host "Successfully pinged $serverName" -ForegroundColor Green
         }
         catch {
             Write-Host "Error pinging ${serverName}: $_"
-            $PingResults.Add([PSCustomObject]@{
-                Name = $serverName
-                Status = "Down"
-                ResponseTime = "N/A"
-            })
+            $Server | Add-Member -NotePropertyName Status -NotePropertyValue "Down"
+            $Server | Add-Member -NotePropertyName ResponseTime -NotePropertyValue "N/A"
+            $PingResults.Add($Server)
         }
     }
     else {
